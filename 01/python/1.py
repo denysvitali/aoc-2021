@@ -35,11 +35,9 @@ def part_one():
   return prev
 
 def part_two():
-  it1 = list()
-  it2 = list()
   idx = 0
   inc = 0
-  for i in lines:
+  for _ in lines:
     idx += 1
     if idx >= 4:
       a1 = lines[idx-4:idx-1]
@@ -49,7 +47,6 @@ def part_two():
         inc += 1
 
   return inc
-
 
 print(f"Part One: {part_one()}")
 print(f"Part Two: {part_two()}")
