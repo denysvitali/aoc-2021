@@ -5,11 +5,11 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 
 struct LanternFish {
-    timer: i32,
+    timer: i8,
 }
 
 impl LanternFish {
-    pub fn new(timer: i32) -> Self {
+    pub fn new(timer: i8) -> Self {
         return LanternFish {
             timer
         }
@@ -30,38 +30,49 @@ impl Debug for LanternFish {
     }
 }
 
-fn parse_lines(input: &str) -> Vec<LanternFish> {
+fn parse_lines(input: &str) -> Vec<i8> {
     input
         .split(",")
-        .map(|x|x.parse::<i32>().unwrap())
-        .map(|x|LanternFish::new(x))
+        .map(|x|x.parse::<i8>().unwrap())
         .collect::<Vec<_>>()
 }
 
-fn get_population(input_file: &str, generation: i32) -> i32 {
+fn get_population(input_file: &str, generation: i32) -> i64 {
     let content = fs::read_to_string(input_file).unwrap();
     let mut population = parse_lines(&content);
+    let mut count: HashMap<i8, i64> = HashMap::new();
 
-    for _ in 1..(generation)+1 {
-        let mut new_fish: Vec<LanternFish>  = Vec::new();
-        for el in &mut population {
-            match el.tick() {
-                Some(l) => new_fish.push(l),
-                None => {}
-            }
-        }
-        population.append(&mut new_fish);
+    for i in 0..10 {
+        count.insert(i, 0);
     }
 
-    return population.len() as i32;
+    for i in &population {
+        let p = *count.get(&i).unwrap();
+        count.insert(*i, p+1);
+    }
+
+    for i in 1..(generation+1) {
+        let z = *count.get(&0).unwrap();
+        for j in 0..9 {
+            let next: i8 = j+1;
+            count.insert(j, *count.get(&next).unwrap());
+        }
+        let eight = 8;
+        let six = 6;
+        count.insert(eight, z);
+        count.insert(six, count.get(&six).unwrap() + z);
+
+    }
+
+    return count.iter().map(|(k,v)| v).sum::<i64>();
 }
 
 
-fn part_one(input_file: &str) -> i32 {
+fn part_one(input_file: &str) -> i64 {
     return get_population(input_file, 80);
 }
 
-fn part_two(input_file: &str) -> i32 {
+fn part_two(input_file: &str) -> i64 {
     return get_population(input_file, 256);
 }
 
