@@ -16,7 +16,7 @@ fn parse_lines(input: &str) -> Vec<Vec<u32>> {
         .collect::<Vec<_>>()
 }
 
-fn adj_2(x: usize, y: usize, v: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
+fn adj(x: usize, y: usize, v: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
     let mut near : Vec<(usize, usize)> = vec![];
 
     let max_x = v.get(0).unwrap().len() as i32;
@@ -34,38 +34,19 @@ fn adj_2(x: usize, y: usize, v: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
     near
 }
 
-fn adj(x: usize, y: usize, v: &Vec<Vec<u32>>) -> Vec<u32> {
-    let mut near : Vec<u32> = vec![];
-
-    let xs = match x {
-        0 => x,
-        _ => x-1
-    };
-
-    let ys = match y {
-        0 => y,
-        _ => y-1
-    };
-
-    let max_x = v.get(0).unwrap().len();
-    let max_y = v.len();
-
-    for i in xs..x+2 {
-        for j in ys..y+2{
-            if i >= max_x || j >= max_y || x == i && y == j {
-                continue
-            }
-            near.push(*v.get(j).unwrap().get(i).unwrap());
-        }
-    }
-    near
+fn adj_values(x: usize, y: usize, v: &Vec<Vec<u32>>) -> Vec<u32> {
+    adj(x, y, v)
+        .iter()
+        .map(|(x,y)| *v.get(*y).unwrap().get(*x).unwrap())
+        .collect::<Vec<u32>>()
 }
 
 fn get_low_points(entries: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
     let mut low_points : Vec<(usize, usize)> = Vec::new();
     for (y, row) in entries.iter().enumerate() {
         for (x, el) in row.iter().enumerate() {
-            if el < adj(x, y, &entries).iter().min().unwrap() {
+
+            if el < adj_values(x, y, entries).iter().min().unwrap() {
                 // Low point
                 low_points.push((x, y));
             }
@@ -119,7 +100,7 @@ fn get_basin(
             }
             visited.insert(idx, true);
             points.insert((x, y));
-            let the_adj = adj_2(x, y, &entries);
+            let the_adj = adj(x, y, &entries);
             for el in &the_adj {
                 if *entries.get(el.1).unwrap().get(el.0).unwrap() != 9 {
                     let el_idx = el.1 * max_x + el.0;
@@ -150,7 +131,6 @@ fn part_two(input_file: &str) -> i32 {
     }
 
     let mut q : VecDeque<(usize, usize)> = VecDeque::new();
-
     let mut basin_sizes : Vec<usize> = Vec::new();
 
     for (x,y) in get_low_points(&entries) {
