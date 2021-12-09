@@ -45,7 +45,6 @@ fn get_low_points(entries: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
     let mut low_points : Vec<(usize, usize)> = Vec::new();
     for (y, row) in entries.iter().enumerate() {
         for (x, el) in row.iter().enumerate() {
-
             if el < adj_values(x, y, entries).iter().min().unwrap() {
                 // Low point
                 low_points.push((x, y));
