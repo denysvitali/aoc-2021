@@ -17,6 +17,18 @@ mod tests {
     }
 
     #[test]
+    fn sample_paths_2(){
+        let mut c = parse_puzzle_input("input/sample.txt");
+        c.visit_small = 2;
+        // println!("{:?}", dot::Dot::with_config(&g, &[dot::Config::EdgeNoLabel]));
+        let paths = dfs_paths(&mut c);
+        for p in &paths {
+            println!("{}", p.join(","));
+        }
+        assert_eq!(paths.len(), 36);
+    }
+
+    #[test]
     fn sample_part_one() {
         assert_eq!(part_one("input/sample.txt"), 10)
     }
@@ -32,13 +44,19 @@ mod tests {
     }
 
 
-    fn sample2_part_two() {
-        assert_eq!(part_one("input/sample2.txt"), 103)
+    #[test]
+    fn sample_part_two() {
+        assert_eq!(part_two("input/sample.txt"), 103)
     }
 
     #[test]
-    fn sample_part_two() {
-        assert_eq!(part_two("input/sample.txt"), -1)
+    fn sample2_part_two() {
+        assert_eq!(part_two("input/sample2.txt"), 103)
+    }
+
+    #[test]
+    fn sample3_part_two() {
+        assert_eq!(part_two("input/sample3.txt"), 3509)
     }
 
     #[test]
@@ -48,6 +66,6 @@ mod tests {
 
     #[test]
     fn input_part_two() {
-        assert_eq!(part_two("input/input.txt"), -1)
+        assert_eq!(part_two("input/input.txt"), 94849)
     }
 }

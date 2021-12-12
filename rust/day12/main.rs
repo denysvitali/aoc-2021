@@ -1,24 +1,24 @@
+use std::collections::{HashMap, HashSet};
 use std::{env, fs};
-use std::collections::{HashMap};
 
 mod test;
 
 extern crate petgraph;
+use petgraph::graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::{Graph, Undirected};
-use petgraph::graph::{NodeIndex};
 
 struct CaveSystem {
     start: NodeIndex,
     end: NodeIndex,
     g: Graph<String, u8, Undirected>,
     visit_small: u8,
-    paths: Vec<Vec<NodeIndex>>
+    paths: Vec<Vec<NodeIndex>>,
 }
 
 impl CaveSystem {
     fn is_uppercase(&self, n: NodeIndex) -> bool {
-        self.g[n] == self.g[n].to_uppercase()   
+        self.g[n].get(0..1).unwrap() == self.g[n].get(0..1).unwrap().to_uppercase()
     }
 
     fn neighbor(&self, v: NodeIndex) -> Vec<NodeIndex> {
@@ -33,12 +33,13 @@ impl CaveSystem {
         neighbors
     }
 
-    fn dfs(&mut self, v: NodeIndex, mut visited: Vec<NodeIndex>) {
+    // Not proud of this part
+    fn dfs_simple(&mut self, v: NodeIndex, mut visited: Vec<NodeIndex>){
         if !self.is_uppercase(v) && visited.contains(&v) {
             return
         }
         visited.push(v);
-        if self.g[v] == "end" {
+        if v == self.end {
             self.paths.push(
                 visited
             );
@@ -47,37 +48,76 @@ impl CaveSystem {
 
         let neighbors = self.neighbor(v);
         for n in neighbors {
-            self.dfs(n, visited.clone());
+            self.dfs_simple(n, visited.clone());
+        }
+    }
+
+    fn dfs(
+        &mut self,
+        v: NodeIndex,
+        mut visited: HashMap<NodeIndex, u8>,
+        mut steps: Vec<NodeIndex>,
+    ) {
+        if v == self.end {
+            steps.push(v);
+            self.paths.push(steps.to_vec());
+            return;
+        }
+
+        if !self.is_uppercase(v) {
+            // Already visited a small cave ?
+            let already_visited_small_cave_twice = match visited
+                .iter()
+                .find(|(_, v)| **v >= self.visit_small) {
+                    Some(_) => true,
+                    None => false
+                };
+
+            let visit_times = *visited.get(&v).unwrap_or(&0);
+            if already_visited_small_cave_twice && visit_times >= 1 {
+                // Can't visit a small cave again if we
+                // already visited a small cave twice
+                return;
+            }
+
+            if v == self.start && visit_times == 1 {
+                // Can't visit start twice
+                return;
+            }
+
+            visited.insert(v, visit_times + 1);
+        }
+        steps.push(v);
+
+        let neighbors = self.neighbor(v);
+        for n in neighbors {
+            self.dfs(n, visited.clone(), steps.clone());
         }
     }
 }
 
 fn parse_lines(contents: &str) -> Vec<(&str, &str)> {
-    contents.split("\n")
-        .map(|l|{
+    contents
+        .split("\n")
+        .map(|l| {
             let s = l.split("-").collect::<Vec<&str>>();
-            (
-                *s.get(0).unwrap_or(&"?"),
-                *s.get(1).unwrap_or(&"?")
-            )
-        }
-        )
-        .collect::<Vec<(&str,&str)>>()
+            (*s.get(0).unwrap_or(&"?"), *s.get(1).unwrap_or(&"?"))
+        })
+        .collect::<Vec<(&str, &str)>>()
 }
- 
 fn parse_puzzle_input(input_file: &str) -> CaveSystem {
     let contents = fs::read_to_string(input_file).unwrap();
     let entries = parse_lines(&contents).clone();
 
-    let mut cave_system = CaveSystem{
+    let mut cave_system = CaveSystem {
         start: NodeIndex::new(0),
         end: NodeIndex::new(0),
         g: Graph::new_undirected(),
         visit_small: 1,
-        paths: vec![],
+        paths: Vec::new(),
     };
 
-    let mut node_map : HashMap<String, NodeIndex> = HashMap::new();
+    let mut node_map: HashMap<String, NodeIndex> = HashMap::new();
 
     for e in &entries {
         let g = &mut cave_system.g;
@@ -87,8 +127,12 @@ fn parse_puzzle_input(input_file: &str) -> CaveSystem {
                 let n = g.add_node(e.0.to_string());
                 node_map.insert(e.0.to_string(), n);
                 match e.0 {
-                    "start" => {cave_system.start = n;}
-                    "end" => {cave_system.end = n;}
+                    "start" => {
+                        cave_system.start = n;
+                    }
+                    "end" => {
+                        cave_system.end = n;
+                    }
                     _ => {}
                 };
                 n
@@ -101,8 +145,12 @@ fn parse_puzzle_input(input_file: &str) -> CaveSystem {
                 let n = g.add_node(e.1.to_string());
                 node_map.insert(e.1.to_string(), n);
                 match e.1 {
-                    "start" => {cave_system.start = n;}
-                    "end" => {cave_system.end = n;}
+                    "start" => {
+                        cave_system.start = n;
+                    }
+                    "end" => {
+                        cave_system.end = n;
+                    }
                     _ => {}
                 };
                 n
@@ -123,14 +171,16 @@ fn parse_puzzle_input(input_file: &str) -> CaveSystem {
     - lowercase nodes can be visited only once
 */
 fn dfs_paths(c: &mut CaveSystem) -> Vec<Vec<String>> {
-    c.dfs(c.start, vec![]);
+    if c.visit_small == 1 {
+        // Part 1
+        c.dfs_simple(c.start, vec![]);
+    } else {
+        c.dfs(c.start, HashMap::new(), vec![]);
+    }
 
     c.paths
         .iter()
-        .map(|x|
-            x.iter().map(|e| c.g[*e].clone())
-            .collect::<Vec<String>>()
-        )
+        .map(|x| x.iter().map(|e| c.g[*e].clone()).collect::<Vec<String>>())
         .collect::<Vec<Vec<String>>>()
 }
 
@@ -161,7 +211,8 @@ fn main() {
         "sample" => Ok("input/sample.txt"),
         "input" => Ok("input/input.txt"),
         _ => Err("invalid choice"),
-    }).unwrap();
+    })
+    .unwrap();
 
     println!("Part 1: {}", part_one(path));
     println!("Part 2: {}", part_two(path));
