@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::{env, fs};
 
 mod test;
@@ -57,6 +57,7 @@ impl CaveSystem {
         v: NodeIndex,
         mut visited: HashMap<NodeIndex, u8>,
         mut steps: Vec<NodeIndex>,
+        mut sc_twice: bool,
     ) {
         if v == self.end {
             steps.push(v);
@@ -66,7 +67,7 @@ impl CaveSystem {
 
         if !self.is_uppercase(v) {
             // Already visited a small cave ?
-            let already_visited_small_cave_twice = match visited
+            let already_visited_small_cave_twice = sc_twice || match visited
                 .iter()
                 .find(|(_, v)| **v >= self.visit_small) {
                     Some(_) => true,
@@ -84,14 +85,14 @@ impl CaveSystem {
                 // Can't visit start twice
                 return;
             }
-
+            sc_twice = already_visited_small_cave_twice;
             visited.insert(v, visit_times + 1);
         }
         steps.push(v);
 
         let neighbors = self.neighbor(v);
         for n in neighbors {
-            self.dfs(n, visited.clone(), steps.clone());
+            self.dfs(n, visited.clone(), steps.clone(), sc_twice);
         }
     }
 }
@@ -175,7 +176,7 @@ fn dfs_paths(c: &mut CaveSystem) -> Vec<Vec<String>> {
         // Part 1
         c.dfs_simple(c.start, vec![]);
     } else {
-        c.dfs(c.start, HashMap::new(), vec![]);
+        c.dfs(c.start, HashMap::new(), vec![], false);
     }
 
     c.paths
