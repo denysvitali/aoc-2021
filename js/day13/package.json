@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sample": "deno run --allow-read='input/sample.txt' main.ts sample",
+    "input": "deno run --allow-read='input/input.txt' main.ts input"
   },
   "author": "Denys Vitali",
   "license": "MIT",
