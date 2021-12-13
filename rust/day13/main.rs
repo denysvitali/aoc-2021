@@ -51,11 +51,7 @@ impl Origami {
         let fold = self.folds.pop_front().unwrap();
         let mut new_dots: HashSet<Coord> = HashSet::new();
         for d in &self.dots {
-            if d.x > fold.x || d.y > fold.y {
-                new_dots.insert(d.fold(fold));
-            } else {
-                new_dots.insert(*d);
-            }
+            new_dots.insert(d.fold(fold));
         }
 
         self.dots = new_dots;
