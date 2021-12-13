@@ -31,6 +31,14 @@ mod tests {
 
     #[test]
     fn sample_part_two() {
+        // Should be:
+        /*
+            ▓▓▓▓▓
+            ▓   ▓
+            ▓   ▓
+            ▓   ▓
+            ▓▓▓▓▓
+         */
         assert_eq!(part_two("input/sample.txt"), -1)
     }
 
@@ -41,6 +49,14 @@ mod tests {
 
     #[test]
     fn input_part_two() {
+        /*
+            ▓▓▓   ▓▓  ▓▓▓▓ ▓    ▓▓▓  ▓  ▓ ▓▓▓▓ ▓▓▓
+            ▓  ▓ ▓  ▓    ▓ ▓    ▓  ▓ ▓  ▓ ▓    ▓  ▓
+            ▓  ▓ ▓      ▓  ▓    ▓▓▓  ▓▓▓▓ ▓▓▓  ▓  ▓
+            ▓▓▓  ▓ ▓▓  ▓   ▓    ▓  ▓ ▓  ▓ ▓    ▓▓▓
+            ▓ ▓  ▓  ▓ ▓    ▓    ▓  ▓ ▓  ▓ ▓    ▓
+            ▓  ▓  ▓▓▓ ▓▓▓▓ ▓▓▓▓ ▓▓▓  ▓  ▓ ▓    ▓
+         */
         assert_eq!(part_two("input/input.txt"), -1)
     }
 }

@@ -84,7 +84,7 @@ impl Origami {
             for x in 0..max_x+1 {
                 let c = Coord{x, y };
                 if self.dots.contains(&c) {
-                    print!("#")
+                    print!("▓")
                 } else {
                     print!(" ")
                 }
