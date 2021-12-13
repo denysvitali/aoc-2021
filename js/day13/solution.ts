@@ -21,7 +21,7 @@ interface CoordsMap {
 }
 
 function printCoords(coords: CoordsMap) {
-    let max = {x: 0, y: 0};
+    const max = {x: 0, y: 0};
     for(const i in coords){
         const c = coords[i];
         if(c.x > max.x) {
