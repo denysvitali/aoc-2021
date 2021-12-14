@@ -8,6 +8,8 @@
 
 <img src="https://forthebadge.com/images/badges/made-with-go.svg" height="20" alt="Made with Go"/>
 
+<img src="https://forthebadge.com/images/badges/made-with-javascript.svg" height="20" alt="Made with Javascript"/>
+
 <img src="https://forthebadge.com/images/badges/made-with-rust.svg" height="20" alt="Made with Rust"/>
 
 <img src="https://forthebadge.com/images/badges/made-with-python.svg" height="20" alt="Made with Python"/>
