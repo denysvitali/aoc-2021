@@ -1,5 +1,20 @@
 # Advent Of Code 2021
 
+<div style="display: flex; width: 100%; flex-direction: row; column-gap: 4px; justify-content: left; margin-bottom: 20px;">
+
+<img src="https://forthebadge.com/images/badges/powered-by-black-magic.svg" height="20" alt="Powered by Black Magic"/>
+
+<img src="https://forthebadge.com/images/badges/works-on-my-machine.svg" height="20" alt="Works on my machine"/>
+
+<img src="https://forthebadge.com/images/badges/made-with-go.svg" height="20" alt="Made with Go"/>
+
+<img src="https://forthebadge.com/images/badges/made-with-rust.svg" height="20" alt="Made with Rust"/>
+
+<img src="https://forthebadge.com/images/badges/made-with-python.svg" height="20" alt="Made with Python"/>
+
+</div>
+
+
 This repository contains my solution to the Advent Of Code 2021.
 
 ## Programming Languages
