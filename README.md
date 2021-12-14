@@ -25,10 +25,10 @@ This repository contains my solution to the Advent Of Code 2021.
 
 #### Python
 
-**Reason:** I solve my AoC mostly on my phone, and sadly Python is
-the only language that allows me to do so.
-
-### Planned
+**Reason:** When I'm on the go and I don't have a computer with me,
+I solve the AoC with Python. The reason is that I usually only have
+access to vim on [Termux](https://termux.com/) and I haven't prepared
+a better setup to include other languages.
 
 #### Rust
 
@@ -42,6 +42,9 @@ be positively impressed by the compiler build time optimizations.
 **Reason:** Well, it's my Go-to language (pun intended) and it
 makes the AoC challenging since it's missing sometimes some basic
 stuff that would (in otger languages) reault in a less verbose code.
+
+### Future
+
 #### Elixir (?)
 
 **Reason:** I always wanted to try it out. Maybe this AoC is a good
