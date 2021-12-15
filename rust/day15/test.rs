@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{parse_input, part_one, part_two, Coord};
+    use crate::{parse_input, part_one, part_two};
 
     #[test]
     fn test_astar() {
@@ -14,7 +14,7 @@ mod tests {
 
     #[test]
     fn big_map() {
-        let mut matrix = parse_input("input/sample.txt");
+        let matrix = parse_input("input/sample.txt");
         let first_line = "11637517422274862853338597396444961841755517295286";
         let first_row = first_line
             .chars()

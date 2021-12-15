@@ -136,8 +136,8 @@ impl Matrix {
 
             let neighbours: Vec<(i32, i32)> = vec![(-1, 0), (1, 0), (0, -1), (0, 1)];
             for neighbor in neighbours {
-                let ncx = (current_node.coord.0 as i32 + neighbor.0);
-                let ncy = (current_node.coord.1 as i32 + neighbor.1);
+                let ncx = current_node.coord.0 as i32 + neighbor.0;
+                let ncy = current_node.coord.1 as i32 + neighbor.1;
 
                 if ncx < 0 || ncy < 0 {
                     continue;
