@@ -140,6 +140,7 @@ impl Matrix {
 
     fn route(&self, start: Coord, end: Coord) -> (u32, Vec<Coord>) {
         let mut open: BinaryHeap<Node> = BinaryHeap::new();
+        let mut open_hm: HashMap<Coord, bool> = HashMap::new();
         let mut closed: HashSet<Coord> = HashSet::new();
         let mut came_from: HashMap<Coord, Node> = HashMap::new();
         let mut g_score: HashMap<Coord, i32> = HashMap::new();
@@ -155,6 +156,7 @@ impl Matrix {
             }
 
             let current_node = current_node_wrapped.unwrap();
+            open_hm.remove(&current_node.coord);
             closed.insert(current_node.coord);
 
             if current_node.coord == end {
@@ -189,8 +191,9 @@ impl Matrix {
                     came_from.insert(nc, current_node);
                     g_score.insert(nc, tentative_gscore);
 
-                    if open.iter().find(|e| e.coord == nc).is_none() {
+                    if !open_hm.contains_key(&nc) {
                         open.push(Node::new(nc, tentative_gscore, 0));
+                        open_hm.insert(nc, true);
                     }
                 }
             }
