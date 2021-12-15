@@ -1,9 +1,10 @@
 extern crate termion;
 
+use std::{env, fs, usize};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::{Display, Formatter};
-use std::{env, fs, usize};
+
 use termion::{color, style};
 
 mod test;
@@ -161,21 +162,35 @@ impl Matrix {
                 break;
             }
 
-            let neighbours = self.neighbors(current_node.coord);
+            let neighbours: Vec<(i32, i32)> = vec![(-1, 0), (1, 0), (0, -1), (0, 1)];
             for neighbor in neighbours {
-                if closed.contains(&neighbor.0) {
+                let ncx = (current_node.coord.0 as i32 + neighbor.0);
+                let ncy = (current_node.coord.1 as i32 + neighbor.1);
+
+                if ncx < 0 || ncy < 0 {
+                    continue;
+                }
+
+                let nc: Coord = (ncx as usize, ncy as usize);
+
+                if nc.0 >= self.size.0 || nc.1 >= self.size.1 {
+                    // Ignore
+                    continue;
+                }
+                if closed.contains(&nc) {
                     // Already visited
                     continue;
                 }
 
-                let tentative_gscore = g_score.get(&current_node.coord).unwrap() + neighbor.1;
+                let val = self.get_value(nc);
+                let tentative_gscore = g_score.get(&current_node.coord).unwrap() + val;
 
-                if tentative_gscore < *g_score.get(&neighbor.0).unwrap_or(&i32::MAX) {
-                    came_from.insert(neighbor.0, current_node);
-                    g_score.insert(neighbor.0, tentative_gscore);
+                if tentative_gscore < *g_score.get(&nc).unwrap_or(&i32::MAX) {
+                    came_from.insert(nc, current_node);
+                    g_score.insert(nc, tentative_gscore);
 
-                    if open.iter().find(|e| e.coord == neighbor.0).is_none() {
-                        open.push(Node::new(neighbor.0, tentative_gscore, 0));
+                    if open.iter().find(|e| e.coord == nc).is_none() {
+                        open.push(Node::new(nc, tentative_gscore, 0));
                     }
                 }
             }
@@ -248,7 +263,7 @@ fn main() {
         "input" => Ok("input/input.txt"),
         _ => Err("invalid choice"),
     })
-    .unwrap();
+        .unwrap();
 
     println!("Part 1: {}", part_one(path));
     println!("Part 2: {}", part_two(path));
