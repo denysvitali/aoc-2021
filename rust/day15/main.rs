@@ -86,36 +86,6 @@ struct Matrix {
 }
 
 impl Matrix {
-    fn neighbors(&self, at: Coord) -> Vec<(Coord, i32)> {
-        let mut neighbors: Vec<(Coord, i32)> = vec![];
-
-        if at.1 < self.size.1 - 1 {
-            // Bottom neighbor
-            let c = (at.0, at.1 + 1);
-            neighbors.push((c, self.get_value(c)));
-        }
-
-        if at.0 < self.size.0 - 1 {
-            // Right Neighbor
-            let c = (at.0 + 1, at.1);
-            neighbors.push((c, self.get_value(c)));
-        }
-
-        if at.0 != 0 {
-            // Left neighbor
-            let c = (at.0 - 1, at.1);
-            neighbors.push((c, self.get_value(c)));
-        }
-
-        if at.1 != 0 {
-            // Top neighbor
-            let c = (at.0, at.1 - 1);
-            neighbors.push((c, self.get_value(c)));
-        }
-
-        neighbors
-    }
-
     fn get_value(&self, c: Coord) -> i32 {
         if c.0 >= self.real_size.0 || c.1 >= self.real_size.1 {
             let mult_x = c.0 / self.real_size.0;
