@@ -1,15 +1,9 @@
-extern crate priority_queue;
 extern crate termion;
 
-use std::{env, fs};
-use std::borrow::BorrowMut;
-use std::cmp::{min, Ordering};
+use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::collections::hash_map::Entry;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::hash::Hash;
-
-use priority_queue::PriorityQueue;
+use std::fmt::{Display, Formatter};
+use std::{env, fs, usize};
 use termion::{color, style};
 
 mod test;
@@ -30,13 +24,14 @@ fn parse_input(input_file: &str) -> Matrix {
 
     Matrix {
         m: matrix,
-        size: (max_x - 1, max_y - 1),
+        size: (max_x, max_y),
+        real_size: (max_x, max_y),
     }
 }
 
 type Coord = (usize, usize);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 struct Node {
     g: i32,
     h: i32,
@@ -45,11 +40,7 @@ struct Node {
 
 impl Node {
     fn new(coord: Coord, g: i32, h: i32) -> Node {
-        return Node {
-            coord,
-            g,
-            h
-        };
+        return Node { coord, g, h };
     }
 
     fn f(&self) -> i32 {
@@ -57,11 +48,13 @@ impl Node {
     }
 }
 
-impl Eq for Node {}
-
-impl PartialEq<Self> for Node {
-    fn eq(&self, other: &Self) -> bool {
-        self.coord == other.coord && self.g == other.g && self.h == other.h
+impl Display for Node {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "({},{}): g={}, h={}",
+            self.coord.0, self.coord.1, self.g, self.h,
+        )
     }
 }
 
@@ -87,20 +80,21 @@ impl Ord for Node {
 
 struct Matrix {
     m: Vec<Vec<i32>>,
-    size: (usize, usize),
+    size: Coord,
+    real_size: Coord,
 }
 
 impl Matrix {
-    fn neighbors(&self, at: Coord, generate: bool) -> Vec<(Coord, i32)> {
+    fn neighbors(&self, at: Coord) -> Vec<(Coord, i32)> {
         let mut neighbors: Vec<(Coord, i32)> = vec![];
 
-        if at.1 < self.size.1 {
+        if at.1 < self.size.1 - 1 {
             // Bottom neighbor
             let c = (at.0, at.1 + 1);
             neighbors.push((c, self.get_value(c)));
         }
 
-        if at.0 < self.size.0 {
+        if at.0 < self.size.0 - 1 {
             // Right Neighbor
             let c = (at.0 + 1, at.1);
             neighbors.push((c, self.get_value(c)));
@@ -122,17 +116,35 @@ impl Matrix {
     }
 
     fn get_value(&self, c: Coord) -> i32 {
+        if c.0 >= self.real_size.0 || c.1 >= self.real_size.1 {
+            let mult_x = c.0 / self.real_size.0;
+            let mult_y = c.1 / self.real_size.1;
+            let mult_max = mult_x + mult_y;
+            let risk_level =
+                self.m[c.1 % (self.real_size.1)][c.0 % (self.real_size.0)] + (mult_max as i32);
+
+            return if risk_level >= 10 {
+                risk_level % 10 + 1
+            } else {
+                risk_level
+            };
+        }
         self.m[c.1][c.0]
     }
+
+    /*
+       Based on the A* algorithm pseudocode:
+       https://en.wikipedia.org/wiki/A*_search_algorithm
+    */
 
     fn route(&self, start: Coord, end: Coord) -> (u32, Vec<Coord>) {
         let mut open: BinaryHeap<Node> = BinaryHeap::new();
         let mut closed: HashSet<Coord> = HashSet::new();
-        let mut path_to: HashMap<Coord, (Coord, i32)> = HashMap::new();
+        let mut came_from: HashMap<Coord, Node> = HashMap::new();
+        let mut g_score: HashMap<Coord, i32> = HashMap::new();
 
-        let should_generate = false;
-
-        open.push(Node::new(start, 0, 0));
+        open.push(Node::new(start, self.get_value(start), 0));
+        g_score.insert(start, 0);
 
         loop {
             let current_node_wrapped = open.pop();
@@ -146,40 +158,32 @@ impl Matrix {
 
             if current_node.coord == end {
                 // Done
-                break
+                break;
             }
 
-            let neighbours = self.neighbors(current_node.coord, should_generate);
+            let neighbours = self.neighbors(current_node.coord);
             for neighbor in neighbours {
-                if closed.contains(&neighbor.0){
+                if closed.contains(&neighbor.0) {
                     // Already visited
-                    continue
+                    continue;
                 }
 
-                let g = current_node.f() + self.get_value(neighbor.0);
-                let h = 0; //(euclidean_distance(neighbor.0, end)) as i32;
-                let n = Node::new(neighbor.0, g, h);
+                let tentative_gscore = g_score.get(&current_node.coord).unwrap() + neighbor.1;
 
-                match path_to.entry(neighbor.0) {
-                    Occupied(mut e) => {
-                        if n.f() < e.get().1 {
-                            e.insert((current_node.coord, n.f()));
-                        }
-                    }
-                    Vacant(e) => {
-                        e.insert((current_node.coord, n.f()));
-                    }
-                }
+                if tentative_gscore < *g_score.get(&neighbor.0).unwrap_or(&i32::MAX) {
+                    came_from.insert(neighbor.0, current_node);
+                    g_score.insert(neighbor.0, tentative_gscore);
 
-                if open.iter().find(|e|*e==&n).is_none() {
-                    open.push(n);
+                    if open.iter().find(|e| e.coord == neighbor.0).is_none() {
+                        open.push(Node::new(neighbor.0, tentative_gscore, 0));
+                    }
                 }
             }
         }
 
         let mut current = end;
-        let mut score = 0;
-        let mut path : Vec<Coord> = Vec::new();
+        let mut score: u32 = 0;
+        let mut path: Vec<Coord> = Vec::new();
 
         path.push(end);
 
@@ -190,14 +194,11 @@ impl Matrix {
             }
 
             // Get From
-            let (from, _) = path_to.get(&current).unwrap();
+            let from = came_from.get(&current).unwrap();
             score += self.get_value(current) as u32;
-            current = *from;
+            current = from.coord;
             path.push(current);
         }
-
-        (0, Vec::new())
-
     }
 
     fn draw_path(&self, path: &Vec<Coord>) {
@@ -216,25 +217,19 @@ impl Matrix {
     }
 }
 
-fn euclidean_distance(p: Coord, q: Coord) -> f32 {
-    ((
-        (p.0 as i32 - q.0 as i32).pow(2) +
-        (p.1 as i32 - q.1 as i32).pow(2)
-    ) as f32).sqrt()
-}
-
 fn part_one(input_file: &str) -> u32 {
     let matrix = parse_input(input_file);
-    let (cost, path) = matrix.route((0, 0), matrix.size);
-    println!("path={:?}", &path);
+    let target = (matrix.real_size.0 - 1, matrix.real_size.1 - 1);
+    let (cost, _) = matrix.route((0, 0), target);
     cost
 }
 
 fn part_two(input_file: &str) -> u32 {
-    let matrix = parse_input(input_file);
-    let target = (matrix.size.0 * 5, matrix.size.1 * 5);
-    let (cost, path) = matrix.route((0, 0), target);
-    println!("path={:?}", path);
+    let mut matrix = parse_input(input_file);
+    matrix.size = (matrix.real_size.0 * 5, matrix.real_size.1 * 5);
+
+    let target = (matrix.size.0 - 1, matrix.size.1 - 1);
+    let (cost, _) = matrix.route((0, 0), target);
     cost
 }
 
@@ -253,7 +248,7 @@ fn main() {
         "input" => Ok("input/input.txt"),
         _ => Err("invalid choice"),
     })
-        .unwrap();
+    .unwrap();
 
     println!("Part 1: {}", part_one(path));
     println!("Part 2: {}", part_two(path));
