@@ -1,9 +1,9 @@
 extern crate termion;
 
-use std::{env, fs, usize};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::{Display, Formatter};
+use std::{env, fs, usize};
 
 use termion::{color, style};
 
@@ -263,7 +263,7 @@ fn main() {
         "input" => Ok("input/input.txt"),
         _ => Err("invalid choice"),
     })
-        .unwrap();
+    .unwrap();
 
     println!("Part 1: {}", part_one(path));
     println!("Part 2: {}", part_two(path));
