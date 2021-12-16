@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"github.com/denysvitali/aoc-2021/go/day16/bitreader"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
@@ -17,32 +17,29 @@ func TestMain(m *testing.M){
 }
 
 func TestLiteralValue(t *testing.T) {
-	p := parsePacket("D2FE28")
+	p := parsePacketFromString("D2FE28")
+	fmt.Printf("p=%+v\n", p)
+}
+
+func TestLiteralValue2(t *testing.T) {
+	reader := bytes.NewReader([]byte{0x06, 0x8A})
+	br := bitreader.New(reader)
+	br.ReadBit(5)
+	p := parsePacket(br)
 	fmt.Printf("p=%+v\n", p)
 }
 
 func TestOperatorPacket1(t *testing.T){
-	p := parsePacket("38006F45291200")
-	fmt.Printf("p=%+v\n", p)
-}
-
-func TestOperatorParsePackets(t *testing.T){
-	p := parsePacket("38006F45291200")
-	switch v := p.(type) {
-	case OperatorPacket:
-		for _, p := range v.subPackets {
-			parsePacket(hex.EncodeToString([]byte{byte(p)}))
-		}
-		fmt.Printf("subpackets=%+v", v.subPackets)
-	}
+	p := parsePacketFromString("38006F45291200")
 	fmt.Printf("p=%+v\n", p)
 }
 
 func TestGetWord(t *testing.T){
-	r := bytes.NewReader([]byte{0xD2, 0xFE, 0x28})
-	b, _ := r.ReadByte()
-	words := getWords(r, b)
-	fmt.Printf("words=%v", words)
+	r := bytes.NewReader([]byte{0x02, 0xFE, 0x28})
+	br := bitreader.New(r)
+	br.ReadBit(6)
+	words := getWords(br)
+	fmt.Printf("words=%v\n", words)
 	expected := []byte{0x07, 0x0E, 0x05}
 	if !bytes.Equal(words, expected) {
 		t.Fatalf(
@@ -53,20 +50,13 @@ func TestGetWord(t *testing.T){
 	}
 }
 
-func TestGetByte(t *testing.T){
-	assert.Equal(t, byte(0x0F), getByte(0xFF,0, 4))
-	assert.Equal(t, byte(0x0E), getByte(0xE0,0, 4))
-	assert.Equal(t, byte(0x03), getByte(0b0011_1000,4, 5))
-	assert.Equal(t, byte(0x07), getByte(0b0011_1000,3, 5))
-}
-
 func TestOperatorPacket2(t *testing.T){
-	p := parsePacket("EE00D40C823060")
+	p := parsePacketFromString("EE00D40C823060")
 	fmt.Printf("p=%+v\n", p)
 }
 
 func TestSubPacket1(t *testing.T){
-	p := parsePacket("2810") // 01010000001
+	p := parsePacketFromString("2810") // 01010000001
 	fmt.Printf("p=%+v\n", p)
 }
 
@@ -75,24 +65,13 @@ func TestSubPacket2(t *testing.T){
 	binary.LittleEndian.PutUint16(input, 0b01010000001)
 	h := hex.EncodeToString(input)
 	logrus.Debugf("h=%s", h)
-	p := parsePacket(h) // 01010000001
+	p := parsePacketFromString(h) // 01010000001
 	fmt.Printf("p=%+v\n", p)
 }
 
 func TestPartOneSample(t *testing.T) {
 	if part1("input/sample.txt") != 16 {
 		t.Fatalf("invalid result")
-	}
-}
-
-func TestWord2Bytes(t *testing.T) {
-	a := byte(0b0111)
-	b := byte(0b1110)
-	c := byte(0b0101)
-
-	output := words2bytes([]byte{a,b,c})
-	if !bytes.Equal(output, []byte{0x07, 0xE5}) {
-		t.Fatalf("invalid output: %02X", output)
 	}
 }
 

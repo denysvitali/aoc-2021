@@ -3,7 +3,7 @@ package main
 type OperatorPacket struct {
 	i          byte
 	l          uint32
-	subPackets []byte
+	subPackets []Packet
 }
 
 func (o OperatorPacket) Type() PacketType {
