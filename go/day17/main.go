@@ -81,43 +81,6 @@ func parseFile(path string) (start Coord, end Coord) {
 	return start, end
 }
 
-func part1(path string) int {
-	start, end := parseFile(path)
-
-	// Choose aim
-	var best = Motion{highest: Coord{x: 0, y: 0}}
-
-	logrus.Debugf("start=%+v, end=%+v", start, end)
-
-	for i:=-100; i<500; i++ {
-		for j := -500; j < 500; j++ {
-			m := NewMotion(i, j)
-			for {
-				m.step()
-				if m.pos.x > end.x {
-					break
-				}
-
-				if m.pos.y < end.y {
-					break
-				}
-
-				if m.pos.x >= start.x &&
-					m.pos.y <= start.y &&
-					m.pos.x <= end.x &&
-					m.pos.y >= end.y {
-					if m.highest.y > best.highest.y {
-						logrus.Debugf("m=%+v reached target, highest = %+v!", m, m.highest)
-						best = m
-					}
-					break
-				}
-			}
-		}
-	}
-	return best.highest.y
-}
-
 func NewMotion(vx int, vy int) Motion {
 	return Motion{
 		originalV: Coord{x: vx, y: vy},
@@ -127,16 +90,14 @@ func NewMotion(vx int, vy int) Motion {
 	}
 }
 
-func part2(path string) int {
-	start, end := parseFile(path)
-
+func getTrajectories(start Coord, end Coord, min int, max int) (targetReached int, best Motion) {
 	// Choose aim
-	var best = Motion{highest: Coord{x: 0, y: 0}}
-	targetReached := 0
+	best = Motion{highest: Coord{x: 0, y: 0}}
+	targetReached = 0
 
 	// There might be a smarter way to do this
-	for i:=-500; i<500; i++ {
-		for j := -500; j < 500; j++ {
+	for i:=min; i<max; i++ {
+		for j := min; j < max; j++ {
 			m := NewMotion(i, j)
 			for {
 				m.step()
@@ -154,7 +115,6 @@ func part2(path string) int {
 					m.pos.y >= end.y {
 					targetReached++
 					if m.highest.y > best.highest.y {
-						logrus.Debugf("m=%+v reached target, highest = %+v!", m, m.highest)
 						best = m
 					}
 					break
@@ -162,7 +122,19 @@ func part2(path string) int {
 			}
 		}
 	}
-	return targetReached
+	return targetReached, best
+}
+
+func part1(path string) int {
+	start, end := parseFile(path)
+	_, b := getTrajectories(start, end, -500, 500)
+	return b.highest.y
+}
+
+func part2(path string) int {
+	start, end := parseFile(path)
+	t, _ := getTrajectories(start, end, -500, 500)
+	return t
 }
 
 
