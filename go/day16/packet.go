@@ -9,4 +9,5 @@ const (
 
 type Packet interface {
 	Type() PacketType
+	Version() int
 }

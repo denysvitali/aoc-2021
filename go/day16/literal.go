@@ -1,11 +1,16 @@
 package main
 
 type LiteralPacket struct {
-	value uint64
+	value   uint64
+	version int
+}
+
+func (l LiteralPacket) Version() int {
+	return l.version
 }
 
 func (l LiteralPacket) Type() PacketType {
 	return Literal
 }
 
-var _ Packet = (*LiteralPacket) (nil)
+var _ Packet = (*LiteralPacket)(nil)

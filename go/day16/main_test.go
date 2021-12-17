@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/denysvitali/aoc-2021/go/day16/bitreader"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
@@ -55,6 +56,11 @@ func TestOperatorPacket2(t *testing.T){
 	fmt.Printf("p=%+v\n", p)
 }
 
+func TestOperatorPacket3(t *testing.T){
+	p := parsePacketFromString("8A004A801A8002F478")
+	fmt.Printf("p=%+v\n", p)
+}
+
 func TestSubPacket1(t *testing.T){
 	p := parsePacketFromString("2810") // 01010000001
 	fmt.Printf("p=%+v\n", p)
@@ -69,34 +75,25 @@ func TestSubPacket2(t *testing.T){
 	fmt.Printf("p=%+v\n", p)
 }
 
-func TestPartOneSample(t *testing.T) {
-	if part1("input/sample.txt") != 16 {
-		t.Fatalf("invalid result")
-	}
+func TestPartOneSample1(t *testing.T) {
+	assert.Equal(t, 16, part1("input/sample1.txt"))
 }
 
-func TestParseNumber(t *testing.T){
-
+func TestPartOneSample2(t *testing.T) {
+	assert.Equal(t, 12, part1("input/sample2.txt"))
 }
 
-func TestGetMask(t *testing.T) {
-	mask := getLeftMask(5)
-	if mask != 0b1111_1000 {
-		t.Fatalf("invalid mask: %08b", mask)
-	}
+func TestPartOneSample3(t *testing.T) {
+	assert.Equal(t, 23, part1("input/sample3.txt"))
+}
 
-	mask = getRightMask(5)
-	if mask != 0b0001_1111 {
-		t.Fatalf("invalid mask: %08b", mask)
-	}
+func TestPartOneSample4(t *testing.T) {
+	assert.Equal(t, 31, part1("input/sample4.txt"))
 }
 
 func TestPartOneInput(t *testing.T) {
-	res := part1("input/input.txt")
-	expected := 1644
-	if res != expected {
-		t.Fatalf("got %d but %d expected", res, expected)
-	}
+	assert.Equal(t, 879, part1("input/input.txt"))
+
 }
 
 func TestPartTwoSample(t *testing.T) {

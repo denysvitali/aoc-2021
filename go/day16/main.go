@@ -19,14 +19,6 @@ func readContent(path string) string {
 	return string(f)
 }
 
-func getLeftMask(size int) byte {
-	return 0xFF << (8 - size)
-}
-
-func getRightMask(size int) byte {
-	return 0xFF >> (8 - size)
-}
-
 func parsePacketFromString(input string) Packet {
 	bContent, err := hex.DecodeString(input)
 	if err != nil {
@@ -40,14 +32,18 @@ func parsePacketFromString(input string) Packet {
 }
 
 func parsePacket(br *bitreader.BitReader) Packet {
+	if !br.HasBytes() {
+		return nil
+	}
 	v := br.ReadBit(3)
 	t := br.ReadBit(3)
 
-	logrus.Debugf("version=%d, type=%d", v, t)
-
-
 	if t == 4 {
 		p := LiteralPacket{}
+		p.version = int(v)
+		if br.Offset() == br.StopAt() {
+			return p
+		}
 		words := getWords(br)
 
 		v := 0
@@ -61,34 +57,43 @@ func parsePacket(br *bitreader.BitReader) Packet {
 		return p
 	}
 
-	logrus.Debugf("This is an operator packet")
-
 	p := OperatorPacket{}
+	p.version = int(v)
 
 	// Get Length Type ID
 	p.i = byte(br.ReadBit(1))
-	logrus.Debugf("length_type_id=%d", p.i)
 
 	switch p.i {
 	case 0:
 		// length is a 15-bit number representing the number of bits in the sub-packets
-		nrBits := br.ReadBit(15)
-		maxOffset := br.Offset() + int(nrBits)
-		logrus.Debugf("nrBits=%d", nrBits)
+		_ = br.ReadBit(15)
+
+		var subPackets []Packet
+		for ;; {
+			packet := parsePacket(br)
+			if packet == nil {
+				break
+			}
+			subPackets = append(subPackets, packet)
+		}
+		p.subPackets = subPackets
+	case 1:
+		nrPackets := br.ReadBit(11)
 		var subPackets []Packet
 
 		for ;; {
-			if br.Offset() == maxOffset {
+			if len(subPackets) == int(nrPackets) {
 				break
 			}
 
 			packet := parsePacket(br)
-			logrus.Debugf("packet=%+v", packet)
+			if packet == nil {
+				break
+			}
 			subPackets = append(subPackets, packet)
 		}
 
 		p.subPackets = subPackets
-	case 1:
 
 	default:
 		panic("???")
@@ -99,6 +104,9 @@ func parsePacket(br *bitreader.BitReader) Packet {
 func getWords(reader *bitreader.BitReader) []byte {
 	var words []byte
 	for ;; {
+		if reader.Offset() == reader.StopAt() {
+			return words
+		}
 		start := reader.ReadBit(1)
 
 		// Read 4 bits
@@ -113,10 +121,24 @@ func getWords(reader *bitreader.BitReader) []byte {
 	return words
 }
 
+func getVersionSum(p Packet) int {
+	acc := 0
+	acc += p.Version()
+
+	switch v:= p.(type) {
+	case OperatorPacket:
+		for _, s := range v.subPackets {
+			acc += getVersionSum(s)
+		}
+	}
+
+	return acc
+}
+
 func part1(path string) int {
 	str := readContent(path)
-	parsePacketFromString(str)
-	return -1
+	p := parsePacketFromString(str)
+	return getVersionSum(p)
 }
 
 func part2(path string) int {

@@ -2,13 +2,15 @@ package bitreader
 
 import (
 	"bytes"
+	"io"
 	"math"
 )
 
 type BitReader struct {
-	reader          *bytes.Reader
-	lastByteRead    byte
-	offset          int
+	reader       *bytes.Reader
+	lastByteRead byte
+	offset       int
+	stopAt       int
 }
 
 func (b *BitReader) ReadBit(amount int) uint64 {
@@ -44,10 +46,28 @@ func (b *BitReader) Offset() int {
 	return b.offset
 }
 
+func (b *BitReader) HasBytes() bool {
+	_, e := b.reader.ReadByte()
+	if e == io.EOF {
+		return false
+	}
+	_ = b.reader.UnreadByte()
+	return true
+}
+
+func (b *BitReader) SetStopAt(offset int) {
+	b.stopAt = offset
+}
+
+func (b *BitReader) StopAt() int {
+	return b.stopAt
+}
+
 func New(reader *bytes.Reader) *BitReader {
 	br := BitReader{
 		reader: reader,
 		offset: 0,
+		stopAt: -1,
 	}
 	return &br
 }
