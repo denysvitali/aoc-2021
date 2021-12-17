@@ -96,8 +96,8 @@ func getTrajectories(start Coord, end Coord, min int, max int) (targetReached in
 	targetReached = 0
 
 	// There might be a smarter way to do this
-	for i:=min; i<max; i++ {
-		for j := min; j < max; j++ {
+	for i:=-end.x; i<=end.x; i++ {
+		for j := -200; j <= 200; j++ {
 			m := NewMotion(i, j)
 			for {
 				m.step()
