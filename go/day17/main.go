@@ -90,7 +90,7 @@ func NewMotion(vx int, vy int) Motion {
 	}
 }
 
-func getTrajectories(start Coord, end Coord, min int, max int) (targetReached int, best Motion) {
+func getTrajectories(start Coord, end Coord) (targetReached int, best Motion) {
 	// Choose aim
 	best = Motion{highest: Coord{x: 0, y: 0}}
 	targetReached = 0
@@ -127,13 +127,13 @@ func getTrajectories(start Coord, end Coord, min int, max int) (targetReached in
 
 func part1(path string) int {
 	start, end := parseFile(path)
-	_, b := getTrajectories(start, end, -500, 500)
+	_, b := getTrajectories(start, end)
 	return b.highest.y
 }
 
 func part2(path string) int {
 	start, end := parseFile(path)
-	t, _ := getTrajectories(start, end, -500, 500)
+	t, _ := getTrajectories(start, end)
 	return t
 }
 
