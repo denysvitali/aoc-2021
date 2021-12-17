@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"github.com/denysvitali/aoc-2021/go/day16/bitreader"
 	"github.com/sirupsen/logrus"
@@ -61,20 +59,6 @@ func TestOperatorPacket3(t *testing.T){
 	fmt.Printf("p=%+v\n", p)
 }
 
-func TestSubPacket1(t *testing.T){
-	p := parsePacketFromString("2810") // 01010000001
-	fmt.Printf("p=%+v\n", p)
-}
-
-func TestSubPacket2(t *testing.T){
-	input := make([]byte, 2)
-	binary.LittleEndian.PutUint16(input, 0b01010000001)
-	h := hex.EncodeToString(input)
-	logrus.Debugf("h=%s", h)
-	p := parsePacketFromString(h) // 01010000001
-	fmt.Printf("p=%+v\n", p)
-}
-
 func TestPartOneSample1(t *testing.T) {
 	assert.Equal(t, 16, part1("input/sample1.txt"))
 }
@@ -91,23 +75,41 @@ func TestPartOneSample4(t *testing.T) {
 	assert.Equal(t, 31, part1("input/sample4.txt"))
 }
 
-func TestPartOneInput(t *testing.T) {
-	assert.Equal(t, 879, part1("input/input.txt"))
-
+func TestOperatorSum(t *testing.T) {
+	p := parsePacketFromString("C200B40A82")
+	assert.Equal(t, 3, p.Evaluate())
 }
 
-func TestPartTwoSample(t *testing.T) {
-	res := part2("input/sample.txt")
-	expected := 195
-	if res != expected {
-		t.Fatalf("got %d but %d expected", res, expected)
-	}
+func TestOperatorProduct(t *testing.T) {
+	p := parsePacketFromString("04005AC33890")
+	assert.Equal(t, 54, p.Evaluate())
+}
+
+func TestOperatorMin(t *testing.T) {
+	p := parsePacketFromString("880086C3E88112")
+	assert.Equal(t, 7, p.Evaluate())
+}
+
+func TestOperatorMax(t *testing.T) {
+	p := parsePacketFromString("CE00C43D881120")
+	assert.Equal(t, 9, p.Evaluate())
+}
+
+func TestOperatorLt(t *testing.T) {
+	p := parsePacketFromString("D8005AC2A8F0")
+	assert.Equal(t, 1, p.Evaluate())
+}
+
+func TestOperatorComplete(t *testing.T) {
+	p := parsePacketFromString("9C0141080250320F1802104A08")
+	assert.Equal(t, 1, p.Evaluate())
+}
+
+func TestPartOneInput(t *testing.T) {
+	assert.Equal(t, 879, part1("input/input.txt"))
 }
 
 func TestPartTwoInput(t *testing.T) {
-	res := part2("input/input.txt")
-	expected := 229
-	if res != expected {
-		t.Fatalf("got %d but %d expected", res, expected)
-	}
+	assert.Equal(t, 539051801941, part2("input/input.txt"))
+
 }

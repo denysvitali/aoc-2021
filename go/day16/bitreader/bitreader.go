@@ -10,7 +10,6 @@ type BitReader struct {
 	reader       *bytes.Reader
 	lastByteRead byte
 	offset       int
-	stopAt       int
 }
 
 func (b *BitReader) ReadBit(amount int) uint64 {
@@ -55,19 +54,10 @@ func (b *BitReader) HasBytes() bool {
 	return true
 }
 
-func (b *BitReader) SetStopAt(offset int) {
-	b.stopAt = offset
-}
-
-func (b *BitReader) StopAt() int {
-	return b.stopAt
-}
-
 func New(reader *bytes.Reader) *BitReader {
 	br := BitReader{
 		reader: reader,
 		offset: 0,
-		stopAt: -1,
 	}
 	return &br
 }

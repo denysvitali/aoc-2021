@@ -41,9 +41,6 @@ func parsePacket(br *bitreader.BitReader) Packet {
 	if t == 4 {
 		p := LiteralPacket{}
 		p.version = int(v)
-		if br.Offset() == br.StopAt() {
-			return p
-		}
 		words := getWords(br)
 
 		v := 0
@@ -58,6 +55,7 @@ func parsePacket(br *bitreader.BitReader) Packet {
 	}
 
 	p := OperatorPacket{}
+	p.t = int(t)
 	p.version = int(v)
 
 	// Get Length Type ID
@@ -66,10 +64,17 @@ func parsePacket(br *bitreader.BitReader) Packet {
 	switch p.i {
 	case 0:
 		// length is a 15-bit number representing the number of bits in the sub-packets
-		_ = br.ReadBit(15)
+		bits := br.ReadBit(15)
+		maxOffset := br.Offset() + int(bits)
+		if bits == 0 {
+			break
+		}
 
 		var subPackets []Packet
 		for ;; {
+			if br.Offset() == maxOffset {
+				break
+			}
 			packet := parsePacket(br)
 			if packet == nil {
 				break
@@ -104,15 +109,8 @@ func parsePacket(br *bitreader.BitReader) Packet {
 func getWords(reader *bitreader.BitReader) []byte {
 	var words []byte
 	for ;; {
-		if reader.Offset() == reader.StopAt() {
-			return words
-		}
 		start := reader.ReadBit(1)
-
-		// Read 4 bits
 		words = append(words, byte(reader.ReadBit(4)))
-
-
 		if start == 0 {
 			// Stop reading
 			break
@@ -142,7 +140,9 @@ func part1(path string) int {
 }
 
 func part2(path string) int {
-	return -1
+	str := readContent(path)
+	p := parsePacketFromString(str)
+	return p.Evaluate()
 }
 
 func main() {

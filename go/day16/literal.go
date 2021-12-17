@@ -5,6 +5,10 @@ type LiteralPacket struct {
 	version int
 }
 
+func (l LiteralPacket) Evaluate() int {
+	return int(l.value)
+}
+
 func (l LiteralPacket) Version() int {
 	return l.version
 }
