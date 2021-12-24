@@ -1,17 +1,17 @@
 extern crate termion;
 
 use std::{env, fs, usize};
+use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::{Display, Formatter, Write};
+use std::ptr::hash;
 
 use termion::{color, style};
 
 use MapElement::*;
 
 use crate::Amphipod::{Amber, Bronze, Copper, Desert};
-use std::borrow::Borrow;
-use std::cmp::Ordering;
-use std::ptr::hash;
 
 mod test;
 
@@ -26,7 +26,7 @@ enum MapElement {
     Unknown,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Amphipod {
     Amber,
     Bronze,
@@ -92,24 +92,22 @@ impl Map {
 
     fn entrances(&self) -> Vec<Coord> {
         let mut positions: Vec<Coord> = vec![];
-        for (y, row) in self.content.iter().enumerate() {
-            for (x, v) in row.iter().enumerate() {
-                match v {
-                    Free => {
-                        match self.content[y + 1][x] {
-                            AmphipodW(_) => positions.push((x, y)),
-                            _ => {}
-                        };
-                    }
-                    _ => {}
-                };
-            }
+        for (x, v) in self.content[1].iter().enumerate() {
+            match v {
+                Free => {
+                    match self.content[2][x] {
+                        Wall => {},
+                        _ => positions.push((x, 1))
+                    };
+                }
+                _ => {}
+            };
         }
         positions
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 struct Move {
     from: Coord,
     to: Coord,
@@ -117,29 +115,41 @@ struct Move {
     cost: u32,
 }
 
-#[derive(Clone)]
+#[derive(Debug,Clone)]
 struct GameState {
     amphipods: HashMap<Coord, Amphipod>,
     possible_positions: HashSet<Coord>,
     entrances: Vec<Coord>,
     energy: u32,
-    moves: u32,
+    moves: HashSet<Move>,
 }
 
 impl Display for GameState {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Energy: {}\n", self.energy));
+        f.write_fmt(format_args!(
+            "Energy: {}\nScore: {}\n",
+            self.energy,
+            self.score()
+        ));
         for y in 0..5 {
             for x in 0..15 {
                 let coord: Coord = (x, y);
                 match self.amphipods.get(&coord) {
                     None => {}
-                    Some(x) => {f.write_str(&x.to_string()); continue}
+                    Some(x) => {
+                        f.write_str(&x.to_string());
+                        continue;
+                    }
                 };
 
-                if self.entrances.contains(&coord) || self.possible_positions.contains(&coord) {
+                if self.entrances.contains(&coord) {
+                    f.write_str("_");
+                    continue;
+                }
+
+                if self.possible_positions.contains(&coord){
                     f.write_str(".");
-                    continue
+                    continue;
                 }
 
                 f.write_str("#");
@@ -150,7 +160,7 @@ impl Display for GameState {
     }
 }
 
-impl <'a> PartialEq<Self> for GameState {
+impl<'a> PartialEq<Self> for GameState {
     fn eq(&self, other: &Self) -> bool {
         self.entrances.eq(&other.entrances) &&
             self.energy.eq(&other.energy) &&
@@ -159,27 +169,21 @@ impl <'a> PartialEq<Self> for GameState {
     }
 }
 
-impl <'a> PartialOrd<Self> for GameState {
+impl<'a> PartialOrd<Self> for GameState {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        todo!()
+        return Option::from(self.cmp(&other));
     }
 }
 
-impl <'a> Eq for GameState{}
+impl<'a> Eq for GameState {}
 
-impl <'a> Ord for GameState {
+impl<'a> Ord for GameState {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.energy < other.energy {
-            return Ordering::Greater
-        }
-        else if self.energy > other.energy {
-            return Ordering::Less
-        }
-        return Ordering::Equal
+        self.score().cmp(&other.score())
     }
 }
 
-impl<'a,'b> GameState {
+impl<'a, 'b> GameState {
     fn new(amphipod_positions: HashMap<Coord, Amphipod>,
            possible_positions: HashSet<Coord>,
            entrances: Vec<Coord>,
@@ -187,7 +191,7 @@ impl<'a,'b> GameState {
         GameState {
             amphipods: amphipod_positions,
             energy: 0,
-            moves: 0,
+            moves: HashSet::new(),
             possible_positions,
             entrances,
         }
@@ -197,24 +201,37 @@ impl<'a,'b> GameState {
         let pos = vec![Amber, Bronze, Copper, Desert];
         for (o, e) in self.entrances.iter().enumerate() {
             if e.0 == c.0 && e.1 < c.1 {
-                return a == &pos[o]
+                return a == &pos[o];
             }
         }
         false
     }
 
-    fn next_moves(&self, last_move: Option<&Move>) -> Vec<Move> {
+    fn correct_column(&self, c: &Coord) -> bool {
+        let pos = vec![Amber, Bronze, Copper, Desert];
+        for (o, e) in self.entrances.iter().enumerate() {
+            if e.0 == c.0 {
+                // Check if the column is correct
+                for y in (e.1 + 1)..(e.1 + 10) {
+                    let c = (e.0, y);
+                    if !self.amphipods.contains_key(&c) {
+                        continue
+                    }
+                    if self.amphipods.get(&c).unwrap() != &pos[o] {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+
+    fn next_moves(&self) -> Vec<Move> {
         let mut output_moves: Vec<Move> = Vec::new();
         for (c, a) in &self.amphipods {
-            // Check if this Amphipod can move
-            if last_move.is_some() && last_move.unwrap().to == *c {
-                // Ignore, otherwise we keep on moving the same piece
-                continue
-            }
-
-            if self.in_right_position(c, a) {
+            if self.correct_column(c) {
                 // Ignore
-                continue
+                continue;
             }
 
             let mut moves: HashSet<(Coord, u32)> = HashSet::new();
@@ -225,7 +242,10 @@ impl<'a,'b> GameState {
                 to: m.0,
                 whom: a.clone(),
                 cost: m.1,
-            }).collect::<Vec<Move>>();
+            })
+                .filter(|x| !self.moves.contains(x))
+                .collect::<Vec<Move>>();
+
             output_moves.append(&mut moves_arr);
         }
         output_moves
@@ -235,26 +255,26 @@ impl<'a,'b> GameState {
                       a: &Amphipod,
                       moves: &mut HashSet<(Coord, u32)>,
                       visited: &mut HashSet<Coord>,
-                      energy: u32
+                      energy: u32,
     ) {
         for (x, y) in vec![(0, 1), (0, -1), (1, 0), (-1, 0)] {
             let new_x = (c.0 as i32 + x) as i32;
             let new_y = (c.1 as i32 + y) as i32;
             if new_x < 0 || new_y < 0 {
-                continue
+                continue;
             }
             let coord: Coord = (new_x as usize, new_y as usize);
 
             if visited.contains(&coord) {
                 // Won't visit again, it's useless
-                continue
+                continue;
             }
 
-            if self.entrances.contains(&coord){
+            if self.entrances.contains(&coord) {
                 // Entrances cannot be final positions
-                visited.insert(coord);
+                // visited.insert(coord);
                 self.evaluate_moves(coord, a, moves, visited, energy + a.energy());
-                continue
+                continue;
             }
 
             if self.possible_positions.contains(&coord) {
@@ -263,38 +283,66 @@ impl<'a,'b> GameState {
                 moves.insert((coord, energy + a.energy()));
 
                 // Validate moves from this next position
-                self.evaluate_moves(coord, a, moves, visited,energy + a.energy());
+                self.evaluate_moves(coord, a, moves, visited, energy + a.energy());
             }
         }
     }
 
-    fn play_move(&self, m: &Move) -> Option<GameState> {
-        if self.moves > 10 {
-            return None
+    fn completed(&self) -> u32 {
+        let mut counter = 0;
+        for (c, a) in &self.amphipods {
+            if self.in_right_position(&c, &a) {
+                counter += 1;
+            }
         }
+        counter
+    }
+
+    fn score(&self) -> i32 {
+        return -(self.energy as i32) + self.completed() as i32 * 10000;
+    }
+
+    fn play_move(&self, m: &Move) -> GameState {
         let mut new_game_state = self.clone();
         new_game_state.amphipods.remove(&m.from);
         new_game_state.amphipods.insert(m.to, m.whom);
         new_game_state.possible_positions.remove(&m.to);
         new_game_state.possible_positions.insert(m.from);
-        new_game_state.consume(m.cost);
-        new_game_state.moves += 1;
+        new_game_state.consume(*&m.cost);
+        new_game_state.moves.insert(m.clone());
+        return new_game_state;
+    }
 
-        let mut game_states: BinaryHeap<GameState> = BinaryHeap::new();
-        let next_moves = new_game_state.next_moves(Some(&m));
-        for next_move in &next_moves{
-            let cgs = new_game_state.play_move(&next_move.clone());
-            if cgs.as_ref().is_none() {
-                continue
-            }
-            if cgs.as_ref().unwrap().win(){
-                game_states.push(cgs.unwrap().clone());
+    fn solve(&mut self) -> Option<GameState> {
+        if self.win() {
+            println!("Win! {}\n{}", self.energy, self);
+            return Some(self.clone());
+        }
+
+        if self.moves.len() > 10 {
+            return None;
+        }
+
+        let mut best_options = BinaryHeap::new();
+
+        // Get next moves
+        let moves = self.next_moves();
+
+        for m in moves {
+            let new_state = self.play_move(&m);
+            best_options.push(new_state);
+        }
+
+        let mut winners: BinaryHeap<GameState> = BinaryHeap::new();
+
+        for mut i in best_options {
+            match i.solve() {
+                Some(v) => winners.push(v),
+                None => {}
             }
         }
-        if game_states.len() == 0 {
-            return None
-        }
-        Some(game_states.peek().unwrap().clone())
+
+        return winners.pop()
     }
 
     fn win(&self) -> bool {
@@ -314,22 +362,26 @@ impl<'a,'b> GameState {
             }
 
             // Find entries for this X
+            let mut count = 0;
             for y_offset in 1..10 {
                 let a_c = (x, r.1 + y_offset);
+                if self.possible_positions.contains(&a_c) {
+                    return false
+                }
                 match self.amphipods.get(&a_c) {
                     Some(v) => {
                         if *v != amphipods_list[offset] {
-                            return false
+                            return false;
                         }
-                    },
-                    None => break
+                    }
+                    None => { break }
                 }
             }
         }
-        return true
+        return true;
     }
 
-    fn consume(&mut self, amount: u32){
+    fn consume(&mut self, amount: u32) {
         self.energy += amount;
     }
 }
@@ -381,7 +433,7 @@ fn parse_input<'a>(input_file: &str) -> GameState {
     };
     let mut entrances = map.entrances();
     // sort entrances by X
-    entrances.sort_by(|(x1,y1), (x2, y2)| x1.cmp(x2));
+    entrances.sort_by(|(x1, y1), (x2, y2)| x1.cmp(x2));
 
     let amphipod_positions = map.amphipod_positions();
     let possible_positions = map.possible_positions();
@@ -390,15 +442,10 @@ fn parse_input<'a>(input_file: &str) -> GameState {
 }
 
 fn part_one(input_file: &str) -> u32 {
-    let game_state = parse_input(input_file);
-    let next_moves = game_state.next_moves(None);
+    let mut game_state = parse_input(input_file);
+    let next_moves = game_state.solve();
 
-    for m in &next_moves {
-        println!("Playing move {:?}", m);
-        game_state.play_move(m);
-    }
-
-    println!("next_moves={:?}", next_moves);
+    println!("next_moves={}", next_moves.unwrap());
     0
 }
 
