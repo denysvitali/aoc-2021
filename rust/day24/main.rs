@@ -1,8 +1,8 @@
 use std::{env, fs, usize};
-use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fmt::{Display, Formatter, Write};
+use std::hash::{Hash, Hasher};
 use std::ptr::hash;
 
 use crate::Instruction::Single;
@@ -10,20 +10,20 @@ use crate::Instruction::Single;
 mod test;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 enum VarNum {
     Variable(char),
     Number(i64),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 enum Instruction {
     Single(InstructionType, char),
     Double(InstructionType, char, VarNum),
     Unknown,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 enum InstructionType {
     Input,
     Add,
@@ -69,127 +69,199 @@ fn parse_input(input_file: &str) -> Vec<Instruction> {
         .collect()
 }
 
-fn get_value<'a>(variables_value: &'a HashMap<char, i64>, vn: &'a VarNum) -> Option<&'a i64> {
+fn get_value<'a>(variables_value: &'a Vars, vn: &'a VarNum) -> Option<&'a i64> {
     match vn {
         VarNum::Number(v) => Some(v),
-        VarNum::Variable(c) => variables_value.get(&c)
+        VarNum::Variable(c) => variables_value.content.get(&c)
     }
 }
 
-/*
-    exec runs the instructions against the input, then it returns a boolean
-    indicating whether the input was valid or not
- */
-fn exec(mut input: u64, len: u32, instructions: &Vec<Instruction>) -> HashMap<char, i64> {
-    let mut offset = 0;
-    let mut digits: Vec<i32> = Vec::new();
+#[derive(Clone, Eq, PartialEq)]
+struct Vars {
+    content: HashMap<char, i64>,
+}
 
-    while input != 0 {
-        digits.push((input % 10) as i32);
-        input /= 10;
+impl Vars {
+    fn new() -> Self {
+        Self {
+            content: HashMap::new(),
+        }
+    }
+}
+
+impl Hash for Vars {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for i in self.content.keys() {
+            i.hash(state);
+            self.content.get(i).unwrap().hash(state);
+        }
+    }
+}
+
+struct Executor {
+    cache: HashMap<(usize, Vars, Vec<u8>), Vars>,
+}
+
+impl Executor {
+    fn new() -> Self {
+        Executor {
+            cache: HashMap::new()
+        }
     }
 
-    let to_add = len - (digits.len() as u32);
-    for _ in 0..to_add {
-        digits.push(0);
-    }
-
-    digits.reverse();
-
-    let mut variables_value: HashMap<char, i64> = HashMap::new();
-    for i in instructions {
-        match i {
-            Instruction::Single(it, c) => {
-                variables_value.insert(*c, digits[offset].into());
-                offset += 1;
+    fn exec_instr(&mut self, instruction: &Instruction, input: i64, mut vars: &mut Vars) -> (Vars, bool) {
+        let mut input_read = false;
+        match instruction {
+            Instruction::Single(_, c) => {
+                vars.content.insert(*c, input);
+                input_read = true;
             }
             Instruction::Double(it, v, vn) => {
-                let var_value = get_value(&variables_value, vn);
+                let var_value = get_value(&vars, &vn);
                 if var_value.is_none() {
-                    continue;
+                    return (vars.clone(), input_read);
                 }
 
                 let var_val = *var_value.unwrap();
-                let mut e = variables_value.entry(*v).or_insert(0);
+                let mut e = vars.content.entry(*v).or_insert(0);
 
                 match it {
                     InstructionType::Add => {
-                        *e += var_val;
+                        *e += var_val
                     }
                     InstructionType::Mul => {
-                        *e *= var_val;
+                        *e *= var_val
                     }
                     InstructionType::Div => {
-                        *e /= var_val;
+                        *e /= var_val
                     }
                     InstructionType::Mod => {
-                        *e %= var_val;
+                        *e %= var_val
                     }
                     InstructionType::Eql => {
                         if *e == var_val {
-                            *e = 1;
+                            *e = 1
                         } else {
                             *e = 0;
                         }
                     }
                     _ => {}
-                };
+                }
             }
             Instruction::Unknown => {}
         };
+        return (vars.clone(), input_read);
     }
-    return variables_value;
-}
 
-fn part_one(input_file: &str) -> u64 {
-    let mut input = parse_input(input_file);
+    /*
+        exec runs the instruction block against the input with the given input variables,
+        then it returns the output variables.
+    */
+    fn exec(&mut self,
+            digits: &[u8],
+            input_vars: &Vars,
+            block: &Vec<Instruction>,
+            block_id: usize,
+    ) -> Vars {
+        // Check if we've already seen this block, with these vars and this input:
+        let k = (block_id, input_vars.clone(), Vec::from(digits.clone()));
+        if self.cache.contains_key(&k) {
+            return self.cache.get(&k).unwrap().clone();
+        }
 
-    let input_counts = input.iter()
-        .map(|i| match i {
-            Single(it, v) => {
-                match it {
-                    InstructionType::Input => Some(v),
-                    _ => None,
+        let mut offset = 0;
+        let mut vars = Vars::new();
+        let mut input = -1;
+        if digits.len() != 0 {
+            input = digits[offset] as i64;
+        }
+
+        for i in block {
+            let (vars_new, input_read) = self.exec_instr(i, input, &mut vars);
+            if input_read {
+                offset += 1;
+                if offset >= digits.len() {
+                    input = -1;
+                } else {
+                    input = digits[offset] as i64;
                 }
             }
-            _ => None,
-        })
-        .filter(Option::is_some)
-        .map(|x| *x.unwrap())
-        .collect::<Vec<char>>();
+            vars = vars_new;
+        }
+        return vars;
+    }
+}
 
-    println!("Input: {:?}", input_counts.len());
+fn u64_to_digits(mut input: u64) -> Vec<u8> {
+    let mut digits: Vec<u8> = Vec::new();
+    while input != 0 {
+        let digit: u8 = (input % 10) as u8;
+        digits.push(digit);
+        input -= digit as u64;
+        input /= 10;
+    }
+    digits.reverse();
+    digits
+}
 
-    let mut blocks : Vec<Vec<Instruction>> = Vec::new();
+fn get_blocks(input: &Vec<Instruction>) -> Vec<Vec<Instruction>> {
+    let mut blocks: Vec<Vec<Instruction>> = Vec::new();
     let mut v: Vec<Instruction> = Vec::new();
     for i in input {
         match i {
             Instruction::Single(_, _) => {
+                v.push(i.clone());
                 if v.len() > 0 {
-                    blocks.push(v.clone());
+                    blocks.push(v);
                 }
                 v = Vec::new();
             }
             Instruction::Double(_, _, _) => {
-                v.push(i);
+                v.push(i.clone());
             }
             _ => {}
         }
     }
     blocks.push(v);
+    blocks
+}
 
-    println!("blocks={}", blocks.len());
+fn single_instruction(b: &Instruction) -> bool {
+    match b {
+        Instruction::Single(_, _) => true,
+        _ => false
+    }
+}
 
-    let max: u64 = (10 as u64).pow(input_counts.len() as u32) as u64 - 1;
-    let min: u64 = (10 as u64).pow(input_counts.len() as u32 - 1) as u64;
+fn part_one(input_file: &str) -> i32 {
+    let mut instructions = parse_input(input_file);
+    let blocks = get_blocks(&instructions);
 
-    for i in min..max + 1 {
-        let exec_result = exec(i, input_counts.len() as u32, &input);
-        if *exec_result.get(&'z').unwrap() == 0 {
-            println!("{}", i);
+    let mut e = Executor::new();
+    let len: usize = 14;
+
+    for i in 0..10_u64.pow(len as u32) - 1 {
+        let input_value = 10_u64.pow(len as u32) - 1 - i;
+
+        let mut i_digits = u64_to_digits(input_value);
+        let mut digits = Vec::new();
+        while len > i_digits.len() + digits.len() {
+            digits.push(0);
         }
-        if i % 10000 == 0 {
-            println!("{}", i);
+        digits.append(&mut i_digits);
+
+        let mut vars = Vars::new();
+
+        let mut offset = 0;
+        for (block_id, b) in blocks.iter().enumerate() {
+            let input_count = b.iter().filter(|i| single_instruction(i)).count();
+            vars = e.exec(&digits[offset..offset + input_count], &vars, b, block_id);
+            offset += input_count;
+        }
+
+
+        if *vars.content.get(&'z').unwrap() == 0 {
+            println!("Found it {}!", input_value);
         }
     }
 
