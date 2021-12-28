@@ -14,7 +14,7 @@ mod tests {
     fn test_alu_1() {
         let input = parse_input("input/sample-1.txt");
         let mut e = Executor::new();
-        let exec_result = e.exec(&[1],&Vars::new(), &input, 0);
+        let exec_result = e.exec(&[1],&Vars::new(), &input);
         assert_eq!(*exec_result.content.get(&'x').unwrap(), -1)
     }
 
@@ -22,7 +22,7 @@ mod tests {
     fn test_alu_2() {
         let input = parse_input("input/sample-1.txt");
         let mut e = Executor::new();
-        let exec_result = e.exec(&[5], &Vars::new(),&input, 0);
+        let exec_result = e.exec(&[5], &Vars::new(),&input);
         assert_eq!(*exec_result.content.get(&'x').unwrap(), -5)
     }
 
@@ -30,7 +30,7 @@ mod tests {
     fn test_alu_3() {
         let input = parse_input("input/sample-2.txt");
         let mut e = Executor::new();
-        let exec_result = e.exec(&[1,3], &Vars::new(),&input, 0);
+        let exec_result = e.exec(&[1,3], &Vars::new(),&input);
         assert_eq!(*exec_result.content.get(&'z').unwrap(), 1)
     }
 
@@ -38,7 +38,7 @@ mod tests {
     fn test_alu_4() {
         let input = parse_input("input/sample-2.txt");
         let mut e = Executor::new();
-        let exec_result = e.exec(&[1,4], &Vars::new(),&input, 0);
+        let exec_result = e.exec(&[1,4], &Vars::new(),&input);
         assert_eq!(*exec_result.content.get(&'z').unwrap(), 0)
     }
 
@@ -46,7 +46,7 @@ mod tests {
     fn test_alu_5() {
         let input = parse_input("input/sample-2.txt");
         let mut e = Executor::new();
-        let exec_result = e.exec(&[3,9], &Vars::new(),&input, 0);
+        let exec_result = e.exec(&[3,9], &Vars::new(),&input);
         assert_eq!(*exec_result.content.get(&'z').unwrap(), 1)
     }
 
@@ -54,7 +54,7 @@ mod tests {
     fn test_alu_6() {
         let input = parse_input("input/sample-3.txt");
         let mut e = Executor::new();
-        let exec_result = e.exec(&[5], &Vars::new(),&input, 0);
+        let exec_result = e.exec(&[5], &Vars::new(),&input);
         assert_eq!(*exec_result.content.get(&'z').unwrap(), 1)
     }
 

@@ -1,29 +1,38 @@
-use std::{env, fs, usize};
+extern crate crossbeam;
+
+use std::{env, fs, thread, usize};
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Display, Formatter, Write};
 use std::hash::{Hash, Hasher};
+use std::process::exit;
 use std::ptr::hash;
+use std::thread::JoinHandle;
+
+use crossbeam::thread::ScopedJoinHandle;
 
 use crate::Instruction::Single;
 
 mod test;
+mod a;
 
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 enum VarNum {
     Variable(char),
     Number(i64),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 enum Instruction {
     Single(InstructionType, char),
     Double(InstructionType, char, VarNum),
     Unknown,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 enum InstructionType {
     Input,
     Add,
@@ -76,7 +85,7 @@ fn get_value<'a>(variables_value: &'a Vars, vn: &'a VarNum) -> Option<&'a i64> {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct Vars {
     content: HashMap<char, i64>,
 }
@@ -99,13 +108,13 @@ impl Hash for Vars {
 }
 
 struct Executor {
-    cache: HashMap<(usize, Vars, Vec<u8>), Vars>,
+    cache: HashSet<(usize, i64)>,
 }
 
 impl Executor {
     fn new() -> Self {
         Executor {
-            cache: HashMap::new()
+            cache: HashSet::new()
         }
     }
 
@@ -161,16 +170,9 @@ impl Executor {
             digits: &[u8],
             input_vars: &Vars,
             block: &Vec<Instruction>,
-            block_id: usize,
     ) -> Vars {
-        // Check if we've already seen this block, with these vars and this input:
-        let k = (block_id, input_vars.clone(), Vec::from(digits.clone()));
-        if self.cache.contains_key(&k) {
-            return self.cache.get(&k).unwrap().clone();
-        }
-
         let mut offset = 0;
-        let mut vars = Vars::new();
+        let mut vars = input_vars.clone();
         let mut input = -1;
         if digits.len() != 0 {
             input = digits[offset] as i64;
@@ -189,6 +191,39 @@ impl Executor {
             vars = vars_new;
         }
         return vars;
+    }
+
+    fn solve(&mut self,
+             blocks: &Vec<Vec<Instruction>>,
+             block_id: usize,
+             mut original_digits: Vec<u8>,
+             v: Vars
+    ) -> Option<i32> {
+        if block_id == blocks.len() {
+            let z = *v.content.get(&'z').unwrap_or(&-1);
+            if z == 0 {
+                return Some(0);
+            }
+            return None
+        }
+
+        for mut digit in 0..10 {
+            let mut digits = original_digits.clone();
+            digits.push(digit);
+            let z = *v.content.get(&'z').unwrap_or(&i64::MIN);
+            if self.cache.contains(&(block_id+1, z)) {
+                continue
+            }
+            let v = self.exec(&[digit], &v, &blocks[block_id]);
+            let s = self.solve(blocks, block_id + 1, digits, v);
+            if s.is_none() {
+                self.cache.insert((block_id, z));
+            } else {
+                println!("Found!");
+                return Some(s.unwrap());
+            }
+        }
+        None
     }
 }
 
@@ -210,11 +245,11 @@ fn get_blocks(input: &Vec<Instruction>) -> Vec<Vec<Instruction>> {
     for i in input {
         match i {
             Instruction::Single(_, _) => {
-                v.push(i.clone());
                 if v.len() > 0 {
                     blocks.push(v);
                 }
                 v = Vec::new();
+                v.push(i.clone());
             }
             Instruction::Double(_, _, _) => {
                 v.push(i.clone());
@@ -237,34 +272,10 @@ fn part_one(input_file: &str) -> i32 {
     let mut instructions = parse_input(input_file);
     let blocks = get_blocks(&instructions);
 
+
     let mut e = Executor::new();
-    let len: usize = 14;
-
-    for i in 0..10_u64.pow(len as u32) - 1 {
-        let input_value = 10_u64.pow(len as u32) - 1 - i;
-
-        let mut i_digits = u64_to_digits(input_value);
-        let mut digits = Vec::new();
-        while len > i_digits.len() + digits.len() {
-            digits.push(0);
-        }
-        digits.append(&mut i_digits);
-
-        let mut vars = Vars::new();
-
-        let mut offset = 0;
-        for (block_id, b) in blocks.iter().enumerate() {
-            let input_count = b.iter().filter(|i| single_instruction(i)).count();
-            vars = e.exec(&digits[offset..offset + input_count], &vars, b, block_id);
-            offset += input_count;
-        }
-
-
-        if *vars.content.get(&'z').unwrap() == 0 {
-            println!("Found it {}!", input_value);
-        }
-    }
-
+    let res = e.solve(&blocks, 0, vec![], Vars::new());
+    println!("res={:?}", res);
     return 0;
 }
 

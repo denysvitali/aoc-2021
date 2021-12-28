@@ -96,7 +96,7 @@ impl Map {
             match v {
                 Free => {
                     match self.content[2][x] {
-                        Wall => {},
+                        Wall => {}
                         _ => positions.push((x, 1))
                     };
                 }
@@ -115,7 +115,7 @@ struct Move {
     cost: u32,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 struct GameState {
     amphipods: HashMap<Coord, Amphipod>,
     possible_positions: HashSet<Coord>,
@@ -147,7 +147,7 @@ impl Display for GameState {
                     continue;
                 }
 
-                if self.possible_positions.contains(&coord){
+                if self.possible_positions.contains(&coord) {
                     f.write_str(".");
                     continue;
                 }
@@ -215,7 +215,7 @@ impl<'a, 'b> GameState {
                 for y in (e.1 + 1)..(e.1 + 10) {
                     let c = (e.0, y);
                     if !self.amphipods.contains_key(&c) {
-                        continue
+                        continue;
                     }
                     if self.amphipods.get(&c).unwrap() != &pos[o] {
                         return false;
@@ -231,6 +231,10 @@ impl<'a, 'b> GameState {
         for (c, a) in &self.amphipods {
             if self.correct_column(c) {
                 // Ignore
+                continue;
+            }
+
+            if c.1 == 3 && self.in_right_position(c, a) {
                 continue;
             }
 
@@ -272,7 +276,7 @@ impl<'a, 'b> GameState {
 
             if self.entrances.contains(&coord) {
                 // Entrances cannot be final positions
-                // visited.insert(coord);
+                visited.insert(coord);
                 self.evaluate_moves(coord, a, moves, visited, energy + a.energy());
                 continue;
             }
@@ -299,7 +303,7 @@ impl<'a, 'b> GameState {
     }
 
     fn score(&self) -> i32 {
-        return -(self.energy as i32) + self.completed() as i32 * 10000;
+        return -5*(self.energy as i32) + self.completed() as i32 * 10000;
     }
 
     fn play_move(&self, m: &Move) -> GameState {
@@ -319,7 +323,7 @@ impl<'a, 'b> GameState {
             return Some(self.clone());
         }
 
-        if self.moves.len() > 10 {
+        if self.moves.len() > 5 {
             return None;
         }
 
@@ -330,54 +334,52 @@ impl<'a, 'b> GameState {
 
         for m in moves {
             let new_state = self.play_move(&m);
-            best_options.push(new_state);
-        }
-
-        let mut winners: BinaryHeap<GameState> = BinaryHeap::new();
-
-        for mut i in best_options {
-            match i.solve() {
-                Some(v) => winners.push(v),
-                None => {}
+            if new_state.score() > 0 {
+                best_options.push(new_state);
             }
         }
 
-        return winners.pop()
+        let mut v = best_options.pop();
+        while v.is_some() {
+            println!("best={}", v.as_ref().unwrap());
+            v.unwrap().solve();
+            v = best_options.pop();
+        }
+
+        return v;
     }
 
     fn win(&self) -> bool {
-        let mut last_x: Option<usize> = Option::None;
-        let mut offset = 0;
-        let amphipods_list: Vec<Amphipod> = vec![Amber, Bronze, Copper, Desert];
-
-        for r in &self.entrances {
-            let x = r.0;
-            if last_x.is_none() {
-                last_x = Some(x);
-            }
-            if x > last_x.unwrap() {
-                // Next
-                last_x = Some(x);
-                offset += 1;
-            }
-
-            // Find entries for this X
-            let mut count = 0;
-            for y_offset in 1..10 {
-                let a_c = (x, r.1 + y_offset);
-                if self.possible_positions.contains(&a_c) {
-                    return false
-                }
-                match self.amphipods.get(&a_c) {
-                    Some(v) => {
-                        if *v != amphipods_list[offset] {
-                            return false;
-                        }
-                    }
-                    None => { break }
-                }
+        for x in vec![(3, 2), (3, 3), (5, 2), (5, 3), (7, 2), (7, 3), (9, 2), (9, 3)] {
+            if !self.amphipods.contains_key(&x) {
+                return false;
             }
         }
+
+        for i in vec![(3, 2), (3, 3)] {
+            if self.amphipods.get(&i).unwrap() != &Amber {
+                return false;
+            }
+        }
+
+        for i in vec![(5, 2), (5, 3)] {
+            if self.amphipods.get(&i).unwrap() != &Bronze {
+                return false;
+            }
+        }
+
+        for i in vec![(7, 2), (7, 3)] {
+            if self.amphipods.get(&i).unwrap() != &Copper {
+                return false;
+            }
+        }
+
+        for i in vec![(9, 2), (9, 3)] {
+            if self.amphipods.get(&i).unwrap() != &Desert {
+                return false;
+            }
+        }
+
         return true;
     }
 

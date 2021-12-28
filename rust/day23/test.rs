@@ -9,6 +9,19 @@ mod tests {
     }
 
     #[test]
+    fn check_not_won(){
+        let game_state = parse_input("input/sample.txt");
+        assert_eq!(false, game_state.win())
+    }
+
+    #[test]
+    fn check_not_won_2(){
+        let game_state = parse_input("input/sample-2.txt");
+        assert_eq!(false, game_state.win())
+    }
+
+
+    #[test]
     fn next_moves(){
         let game_state = parse_input("input/sample.txt");
         let next_moves = game_state.next_moves();
@@ -39,12 +52,6 @@ mod tests {
             let gs = game_state.clone().play_move(&m);
             println!("move = {:?}, game state: \n{}", m, gs);
         }
-    }
-
-    #[test]
-    fn check_not_won(){
-        let game_state = parse_input("input/sample.txt");
-        assert_eq!(false, game_state.win())
     }
 
     #[test]
